@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LinkGuard — Threat Diagnostic Interface</title>
+  <meta name="description" content="Forensic-grade, transparent phishing and malicious URL heuristic analyser. Zero external APIs. Zero telemetry.">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' fill='%230A0D0E'/><text y='18' font-size='16' fill='%2300E5A3' font-family='monospace' font-weight='bold'>LG</text></svg>">
+</head>
+<body>
+
+  <!-- Diagnostic Grid Overlay -->
+  <div class="grid-overlay" aria-hidden="true"></div>
+  <!-- Scan Line -->
+  <div class="scan-line" aria-hidden="true"></div>
+
+  <div class="app-shell">
+
+    <!-- ═══════════════════════════════ SITE HEADER ═══════════════════════════ -->
+    <header class="site-header">
+
+      <!-- Brand -->
+      <a class="brand-block" href="/" aria-label="LinkGuard Home">
+        <div class="brand-pip" aria-hidden="true"></div>
+        <span class="brand-wordmark">LinkGuard</span>
+        <span class="brand-version">v3.0</span>
+      </a>
+
+      <!-- Nav tabs -->
+      <nav class="nav-strip" aria-label="Module Navigation">
+        <button class="nav-tab active" data-target="viewInspector" id="tabInspector">
+          <span class="material-symbols-outlined nav-icon">search</span>
+          CONSOLE
+        </button>
+        <button class="nav-tab" data-target="viewBatch" id="tabBatch">
+          <span class="material-symbols-outlined nav-icon">grid_on</span>
+          BATCH SCAN
+        </button>
+        <button class="nav-tab" data-target="viewGuide" id="tabGuide">
+          <span class="material-symbols-outlined nav-icon">receipt_long</span>
+          HEURISTIC INDEX
+        </button>
+        <button class="nav-tab" data-target="viewSettings" id="tabSettings">
+          <span class="material-symbols-outlined nav-icon">key</span>
+          API KEYS
+        </button>
+      </nav>
+
+      <!-- Right sys-chips -->
+      <div class="header-right">
+        <div class="sys-chip" id="engineStatusPill">
+          <span class="pip-dot emerald" id="statusDot"></span>
+          <span id="statusLabel">INIT…</span>
+        </div>
+        <div class="sys-chip warn" id="threatCountChip" style="display:none;">
+          <span class="pip-dot crimson" id="threatPip"></span>
+          <span id="threatCountLabel">THREAT 0</span>
+        </div>
+        <div class="sys-chip" id="runtimeChip" style="display:none;">
+          <span id="runtimeLabel">0ms</span>
+        </div>
+      </div>
+
+    </header>
+
+    <!-- ════════════════════════════ MAIN CONTENT ══════════════════════════════ -->
+    <main class="main-content">
+
+      <!-- ══════════════ VIEW 1: INSPECTOR / CONSOLE ══════════════ -->
+      <section id="viewInspector" class="view-section active-view">
+
+        <!-- Case Meta Bar (shown after scan) -->
+        <div class="case-bar" id="caseBar" style="display:none;">
+          <div class="case-chip crit">
+            <div class="pip-dot crimson" id="casePip"></div>
+            <span id="caseScore">SCORE: 0</span>
+          </div>
+          <div class="case-chip primary">
+            <span>TARGET FQDN</span>
+            <span id="caseFqdn" style="color:var(--hazard);font-weight:600;max-width:380px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</span>
+          </div>
+          <div class="case-chip" id="casePunyChip" style="display:none;">
+            HOMOGLYPH DETECTED
+          </div>
+          <div class="sys-chip active" style="margin-left:auto;" id="caseRuntime">0ms</div>
+        </div>
+
+        <!-- Hero / Input -->
+        <div class="hero-section" id="heroSection">
+          <div class="terminal-eyebrow">
+            <div class="eyebrow-sq"></div>
+            10 HEURISTIC DETECTORS · ZERO EXTERNAL API · CLIENT-SIDE
+          </div>
+          <h2 class="hero-title">Evaluate link risk<br><span class="accent">before clicking.</span></h2>
+          <p class="hero-sub">
+            Paste any URL. LinkGuard deconstructs its anatomy and runs 10
+            deterministic phishing heuristics — every finding is explained,
+            every token surfaced. No black-box verdicts.
+          </p>
+
+          <!-- CMD Input -->
+          <!-- Threat Intel toggle -->
+          <div class="cmd-input-bar" id="inputBar">
+            <span class="cmd-prompt">url::&gt;&nbsp;</span>
+            <input
+              type="text"
+              id="urlInput"
+              class="cmd-input-field"
+              placeholder="Paste suspicious link (e.g. https://...)"
+              autocomplete="off"
+              spellcheck="false"
+              aria-label="URL to inspect"
+            />
+            <button type="button" id="clearBtn" class="cmd-clear-btn" aria-label="Clear input" title="Clear">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <label class="ti-toggle" title="Run real-time threat intelligence APIs alongside heuristics">
+              <input type="checkbox" id="tiToggle">
+              <span class="ti-toggle-label">THREAT INTEL</span>
+            </label>
+            <button type="button" id="analyzeBtn" class="analyze-btn">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              INSPECT
+            </button>
+          </div>
+
+          <!-- Sample Tags -->
+          <div class="sample-strip">
+            <span class="strip-label">SAMPLES:</span>
+            <button class="sample-tag" data-url="https://www.google.com/search?q=cybersecurity">
+              <div class="tag-sq safe"></div>google.com
+            </button>
+            <button class="sample-tag" data-url="https://github.com/torvalds/linux">
+              <div class="tag-sq safe"></div>github.com
+            </button>
+            <button class="sample-tag" data-url="http://192.168.1.45/secure-banking/login.php">
+              <div class="tag-sq crit"></div>IP-literal bank
+            </button>
+            <button class="sample-tag" data-url="https://xn--pypal-4ve.com/signin/confirm-account?token=xA93kBz">
+              <div class="tag-sq crit"></div>punycode homoglyph
+            </button>
+            <button class="sample-tag" data-url="http://paypal.com.verification.notice-auth.ga/login">
+              <div class="tag-sq crit"></div>subdomain burying
+            </button>
+            <button class="sample-tag" data-url="https://www.chase.com@malicious-harvest-portal.xyz/verification">
+              <div class="tag-sq crit"></div>@ redirect trick
+            </button>
+            <button class="sample-tag" data-url="https://bit.ly/3xY8Z9">
+              <div class="tag-sq warn"></div>shortener mask
+            </button>
+            <button class="sample-tag" data-url="http://apple-id-security-recovery-login.com/auth">
+              <div class="tag-sq crit"></div>hyphen stuffing
+            </button>
+          </div>
+        </div>
+
+        <!-- ══════════ RESULTS PANEL ══════════ -->
+        <div class="results-panel" id="resultsPanel">
+
+          <!-- Verdict Cockpit -->
+          <div class="verdict-cockpit" id="verdictCockpit">
+
+            <!-- Gauge Column -->
+            <div class="gauge-col">
+              <div class="gauge-wrapper">
+                <svg class="gauge-svg" viewBox="0 0 120 120" aria-hidden="true">
+                  <circle class="gauge-track" cx="60" cy="60" r="54"/>
+                  <circle class="gauge-fill" id="gaugeFill" cx="60" cy="60" r="54"/>
+                </svg>
+                <div class="gauge-center">
+                  <div class="gauge-number" id="gaugeNumber">0</div>
+                  <div class="gauge-denom">/ 100</div>
+                </div>
+              </div>
+
+              <!-- Micro-meter segmented bar -->
+              <div class="micro-meter" id="microMeter" aria-hidden="true">
+                <!-- 12 segments, lit dynamically by JS -->
+              </div>
+
+              <div class="gauge-label" id="gaugeLabel">RISK INDEX</div>
+            </div>
+
+            <!-- Verdict Info -->
+            <div class="verdict-info-col">
+              <div class="verdict-meta-row">
+                <span class="verdict-badge" id="verdictBadge">ANALYZING</span>
+                <span class="verdict-passes" id="verdictPasses">— checks pending</span>
+              </div>
+              <div class="verdict-headline" id="verdictHeadline">Running Diagnostics…</div>
+              <div class="verdict-summary" id="verdictSummary">
+                LinkGuard is applying all 10 heuristic detectors to the submitted URL structure.
+              </div>
+            </div>
+
+          </div>
+
+          <!-- URL Anatomy -->
+          <div class="anatomy-panel">
+            <div class="panel-header">
+              <span class="panel-title">EXTRACTED URL ANATOMY</span>
+              <span class="sys-chip" id="anatomyEntropy" style="font-size:9px;">ENTROPY: —</span>
+            </div>
+            <div class="panel-body">
+              <div class="anatomy-url-line" id="anatomyUrl">—</div>
+              <div class="token-grid">
+                <div class="token-cell">
+                  <span class="tk-label">Protocol</span>
+                  <span class="tk-val" id="tkProtocol">—</span>
+                </div>
+                <div class="token-cell">
+                  <span class="tk-label">Subdomains</span>
+                  <span class="tk-val" id="tkSubdomains">—</span>
+                </div>
+                <div class="token-cell">
+                  <span class="tk-label">Root Domain</span>
+                  <span class="tk-val" id="tkRootDomain">—</span>
+                </div>
+                <div class="token-cell">
+                  <span class="tk-label">TLD</span>
+                  <span class="tk-val" id="tkTld">—</span>
+                </div>
+                <div class="token-cell">
+                  <span class="tk-label">Path / Query</span>
+                  <span class="tk-val" id="tkPath">—</span>
+                </div>
+                <div class="token-cell">
+                  <span class="tk-label">SHA-Entropy</span>
+                  <span class="tk-val" id="tkEntropy">—</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Threat Intelligence Panel (shown when keys are configured) -->
+          <div class="ti-panel" id="tiPanel" style="display:none;">
+            <div class="panel-header">
+              <span class="panel-title">THREAT INTELLIGENCE FEEDS</span>
+              <span class="sys-chip" id="tiOverallChip">QUERYING…</span>
+            </div>
+            <div class="panel-body">
+              <div class="ti-sources-grid" id="tiSourcesGrid"></div>
+            </div>
+          </div>
+
+          <!-- Heuristic Checklist -->
+          <div class="diagnostic-section">
+            <div class="diagnostic-header">
+              <span class="diagnostic-title">Diagnostic Breakdown</span>
+              <span class="diagnostic-sub">// Click any check to expand evidence trace</span>
+            </div>
+            <div class="check-list" id="checkList"></div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ══════════════ VIEW 2: BATCH SCANNER ══════════════ -->
+      <section id="viewBatch" class="view-section">
+        <div class="batch-panel">
+          <div class="terminal-eyebrow" style="display:inline-flex;margin-bottom:12px;margin-top:12px;">
+            <div class="eyebrow-sq"></div>BATCH URL TRIAGE · MAX 50 TARGETS
+          </div>
+          <h2 class="hero-title" style="text-align:left;margin-bottom:4px;font-size:20px;">Batch Scanner</h2>
+          <p class="hero-sub" style="text-align:left;margin-bottom:12px;">One URL per line. LinkGuard applies all 10 heuristics in parallel and returns a ranked threat table.</p>
+
+          <div class="anatomy-panel">
+            <div class="panel-header"><span class="panel-title">BATCH INPUT — URL LIST</span></div>
+            <div class="panel-body">
+              <textarea
+                id="batchInput"
+                class="batch-textarea"
+                placeholder="https://google.com&#10;http://192.168.1.1/login&#10;https://bit.ly/sample&#10;http://paypal.verification-portal.ga/auth"
+              ></textarea>
+              <div class="batch-controls">
+                <span>MAX 50 URLS PER SCAN SESSION</span>
+                <button id="runBatchBtn" class="analyze-btn" style="height:32px;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                  SCAN BATCH
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div id="batchResults" style="display:none;margin-top:8px;">
+            <div id="batchSummary" style="font-size:9px;font-family:var(--font-mono);color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px;"></div>
+            <div class="anatomy-panel">
+              <div class="panel-header"><span class="panel-title">THREAT TRIAGE TABLE</span></div>
+              <div style="overflow-x:auto;">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>URL</th>
+                      <th>Score</th>
+                      <th>Verdict</th>
+                      <th>Checks</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="batchTbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════════ VIEW 3: HEURISTICS INDEX ══════════════ -->
+      <section id="viewGuide" class="view-section">
+        <div class="terminal-eyebrow" style="display:inline-flex;margin-bottom:12px;margin-top:12px;">
+          <div class="eyebrow-sq"></div>FORENSIC HEURISTIC INDEX · 10 DETECTORS
+        </div>
+        <h2 class="hero-title" style="text-align:left;margin-bottom:4px;font-size:20px;">Heuristic Reference</h2>
+        <p class="hero-sub" style="text-align:left;margin-bottom:4px;">All detectors are deterministic, client-side, and zero-dependency. Each maps to a documented phisher tradecraft pattern.</p>
+
+        <div class="guide-grid">
+
+          <div class="guide-card">
+            <div class="guide-card-head">
+              <span class="guide-card-title">01 — Protocol Security</span>
+              <span class="guide-badge">Transport · 15 pts</span>
+            </div>
+            <p class="guide-body">Modern services mandate TLS. Unencrypted <code>http://</code> allows on-path interception and script injection. Missing scheme defaults to insecure transport.</p>
+          </div>
+
+          <div class="guide-card">
+            <div class="guide-card-head">
+              <span class="guide-card-title">02 — IP-Literal Host</span>
+              <span class="guide-badge">Domain · 35 pts</span>
+            </div>
+            <p class="guide-body">Legitimate organisations use branded domain names. Direct IPv4/IPv6 hosts like <code>http://192.168.1.1/login</code> bypass DNS reputation systems entirely — favoured by fast-turnaround exploit kits.</p>
+          </div>
+
+          <div class="guide-card">
+            <div class="guide-card-head">
+              <span class="guide-card-title">03 — @ Symbol Redirection</span>
+              <span class="guide-badge">Obfuscation · 35 pts</span>
+            </div>
+            <p class="guide-body">RFC defines <code>@</code> as the credential-host separator. Attackers craft <code>paypal.com@evil.com/login</code> — the browser navigates to the real host after <code>@</code>, but users read the brand name before it.</p>
+          </div>
+
+          <div class="guide-card">
+            <div class="guide-card-head">
+              <span class="guide-card-title">04 — Punycode / Homoglyphs</span>
+              <span class="guide-badge">Visual Deception · 30 pts</span>
+            </div>
+            <p class="guide-body">IDNs translate non-Latin chars via <code>xn--</code>. Phishers register Cyrillic <code>а</code> or Greek <code>ο</code> that are visually indistinguishable from Latin. LinkGuard decodes all labels and normalises homoglyphs.</p>
+          </div>
+
+          <div class="guide-card">
+            <div class="guide-card-head">
+              <span class="guide-card-title">05 — Subdomain Depth</span>
+              <span class="guide-badge">Domain · 15 pts</span>
+            </div>
+            <p class="guide-body">Stacking 4+ subdomains buries the real registered domain off-screen on mobile. On a phone, users see the brand in the visible address bar while <code>evil.com</code> sits beyond the edge.</p>
+          </div>
+
+          <div class="guide-card">
+            <div class="guide-card-head">
+              <span class="guide-card-title">06 — Hyphen Density</span>
+              <span class="guide-badge">Visual Deception · 15 pts</span>
+            </div>
+            <p class="guide-body">Strings like <code>apple-id-security-recovery.com</code> mimic multi-word brand portals using hyphens to bypass trademark blocklists during registration.</p>
+          </div>
+
+          <div class="guide-card">
+            <div class="guide-card-head">
+              <span class="guide-card-title">07 — URL Shortener Mask</span>
+              <span class="guide-badge">Destination Obfuscation · 25 pts</span>
+            </div>
+            <p class="guide-body">Services like <code>bit.ly</code>, <code>tinyurl.com</code>, <code>t.co</code> cloak the real destination host. Used heavily in SMS phishing and spear-phishing campaigns to prevent pre-click inspection.</p>
+          </div>
+
+          <div class="guide-card">
+            <div class="guide-card-head">
+              <span class="guide-card-title">08 — Suspicious TLDs</span>
+              <span class="guide-badge">Domain · 20 pts</span>
+            </div>
+            <p class="guide-body">TLDs like <code>.tk .ml .ga .cf .xyz .top .buzz</code> offer free or near-free registration. They carry elevated historical cybercrime rates and are disproportionately favoured by phishing kits.</p>
+          </div>
+
+          <div class="guide-card">
+            <div class="guide-card-head">
+              <span class="guide-card-title">09 — Brand Impersonation</span>
+              <span class="guide-badge">Identity · 35 pts</span>
+            </div>
+            <p class="guide-body">Flags high-value brands (Google, PayPal, Apple, Chase, Microsoft, Amazon…) appearing in subdomains or paths when the root domain is NOT owned by that brand. Also catches Punycode-decoded homoglyph brand spoofing.</p>
+          </div>
+
+          <div class="guide-card">
+            <div class="guide-card-head">
+              <span class="guide-card-title">10 — Shannon Entropy</span>
+              <span class="guide-badge">Obfuscation · 15 pts</span>
+            </div>
+            <p class="guide-body">Shannon entropy &gt; 4.2 bits/char in long URLs indicates base64 payloads, binary staging params, or randomised malware tokens. Legitimate URLs do not exhibit this pattern.</p>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ══════════════ VIEW 4: API KEY SETTINGS ══════════════ -->
+      <section id="viewSettings" class="view-section">
+        <div class="terminal-eyebrow" style="display:inline-flex;margin-bottom:12px;margin-top:12px;">
+          <div class="eyebrow-sq"></div>THREAT INTELLIGENCE KEYS · SESSION-ONLY STORAGE
+        </div>
+        <h2 class="hero-title" style="text-align:left;margin-bottom:4px;font-size:20px;">API Key Configuration</h2>
+        <p class="hero-sub" style="text-align:left;margin-bottom:16px;">
+          Keys are stored in server memory only — never written to disk or transmitted beyond this machine.
+          They expire when the server restarts. Enable the <strong style="color:var(--primary);">THREAT INTEL</strong>
+          toggle in the inspector to run real-time checks alongside heuristics.
+        </p>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:8px;max-width:1100px;">
+
+          <!-- VirusTotal -->
+          <div class="anatomy-panel">
+            <div class="panel-header">
+              <span class="panel-title" style="color:#4285f4;">VIRUSTOTAL</span>
+              <span class="sys-chip" id="vtStatus">NOT CONFIGURED</span>
+            </div>
+            <div class="panel-body" style="display:flex;flex-direction:column;gap:8px;">
+              <p class="guide-body">
+                80+ AV engine aggregation. Free tier: 4 requests/min.
+                Get key at <code>virustotal.com/gui/my-apikey</code>
+              </p>
+              <div style="display:flex;gap:4px;">
+                <input type="password" id="vtKey" class="cmd-input-field" style="background:var(--void-base);border:1px solid var(--outline-variant);padding:6px 8px;flex:1;" placeholder="Paste VirusTotal API key…">
+                <button class="analyze-btn" style="height:34px;padding:0 12px;" onclick="saveKey('virusTotal','vtKey','vtStatus')">SAVE</button>
+              </div>
+              <p class="guide-body" id="vtKeyMasked" style="color:var(--text-muted);"></p>
+            </div>
+          </div>
+
+          <!-- Google Safe Browsing -->
+          <div class="anatomy-panel">
+            <div class="panel-header">
+              <span class="panel-title" style="color:#34a853;">GOOGLE SAFE BROWSING</span>
+              <span class="sys-chip" id="gsbStatus">NOT CONFIGURED</span>
+            </div>
+            <div class="panel-body" style="display:flex;flex-direction:column;gap:8px;">
+              <p class="guide-body">
+                Google's phishing &amp; malware URL database. Free with Google Cloud project.
+                Enable at <code>console.cloud.google.com</code> → Safe Browsing API
+              </p>
+              <div style="display:flex;gap:4px;">
+                <input type="password" id="gsbKey" class="cmd-input-field" style="background:var(--void-base);border:1px solid var(--outline-variant);padding:6px 8px;flex:1;" placeholder="Paste Google Safe Browsing API key…">
+                <button class="analyze-btn" style="height:34px;padding:0 12px;" onclick="saveKey('googleSafeBrowsing','gsbKey','gsbStatus')">SAVE</button>
+              </div>
+              <p class="guide-body" id="gsbKeyMasked" style="color:var(--text-muted);"></p>
+            </div>
+          </div>
+
+          <!-- URLScan.io -->
+          <div class="anatomy-panel">
+            <div class="panel-header">
+              <span class="panel-title" style="color:#a855f7;">URLSCAN.IO</span>
+              <span class="sys-chip" id="usStatus">NOT CONFIGURED</span>
+            </div>
+            <div class="panel-body" style="display:flex;flex-direction:column;gap:8px;">
+              <p class="guide-body">
+                DOM sandbox + screenshot + threat verdict. Free: 60 scans/hr.
+                Get key at <code>urlscan.io/user/profile/</code>
+              </p>
+              <div style="display:flex;gap:4px;">
+                <input type="password" id="usKey" class="cmd-input-field" style="background:var(--void-base);border:1px solid var(--outline-variant);padding:6px 8px;flex:1;" placeholder="Paste URLScan.io API key…">
+                <button class="analyze-btn" style="height:34px;padding:0 12px;" onclick="saveKey('urlScan','usKey','usStatus')">SAVE</button>
+              </div>
+              <p class="guide-body" id="usKeyMasked" style="color:var(--text-muted);"></p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Key save status toast -->
+        <div id="keySaveToast" style="display:none;margin-top:12px;" class="case-chip primary">
+          <span class="pip-dot emerald"></span>
+          <span id="keySaveMsg">Keys saved for this session.</span>
+        </div>
+
+        <!-- How to use -->
+        <div class="anatomy-panel" style="margin-top:16px;max-width:700px;">
+          <div class="panel-header"><span class="panel-title">HOW IT WORKS</span></div>
+          <div class="panel-body">
+            <div class="guide-grid" style="grid-template-columns:1fr;gap:6px;">
+              <div class="guide-card">
+                <div class="guide-card-head"><span class="guide-card-title">1. Enter API Keys Above</span></div>
+                <p class="guide-body">Keys are held in server RAM only. They vanish on restart. Set them as environment variables (<code>VIRUSTOTAL_API_KEY</code>, <code>GOOGLE_SAFE_BROWSING_KEY</code>, <code>URLSCAN_API_KEY</code>) for persistence.</p>
+              </div>
+              <div class="guide-card">
+                <div class="guide-card-head"><span class="guide-card-title">2. Enable the THREAT INTEL Toggle</span></div>
+                <p class="guide-body">In the CONSOLE tab, toggle <strong style="color:var(--primary)">THREAT INTEL</strong> next to the INSPECT button. This sends your URL to configured APIs alongside the local heuristics engine.</p>
+              </div>
+              <div class="guide-card">
+                <div class="guide-card-head"><span class="guide-card-title">3. Read the Combined Report</span></div>
+                <p class="guide-body">The <strong>THREAT INTELLIGENCE FEEDS</strong> panel appears above the Diagnostic Breakdown, showing per-source verdicts (CLEAN / SUSPICIOUS / MALICIOUS) with detection rates, categories, and sandbox screenshots.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- ═══════════════════════════ STATUS BAR / FOOTER ════════════════════ -->
+    <footer class="status-bar">
+      <div class="sb-left">
+        <span class="sb-item active">
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="var(--primary)"><rect width="8" height="8"/></svg>
+          LINKGUARD
+        </span>
+        <span class="sb-item">NO TELEMETRY</span>
+        <span class="sb-item" id="footerApiMode">PURE HEURISTICS</span>
+      </div>
+      <div class="sb-right">
+        <span class="sb-item" id="footerEngine">ENGINE: LOADING</span>
+        <span class="sb-item active">SEC_ENCLAVE_READY</span>
+      </div>
+    </footer>
+
+  </div><!-- /app-shell -->
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0&display=swap">
+
+  <script src="js/engine.js"></script>
+  <script src="js/app.js"></script>
+
+  <script>
+    /* Inline settings helpers (no build step needed) */
+    async function saveKey(apiField, inputId, chipId) {
+      const val = document.getElementById(inputId).value.trim();
+      const body = {};
+      body[apiField] = val;
+
+      try {
+        const res = await fetch('/api/keys', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        updateKeyChips(data);
+        document.getElementById(inputId).value = '';
+        const toast = document.getElementById('keySaveToast');
+        document.getElementById('keySaveMsg').textContent = val
+          ? `${apiField} key saved for this session.`
+          : `${apiField} key cleared.`;
+        toast.style.display = 'flex';
+        setTimeout(() => toast.style.display = 'none', 3000);
+      } catch (e) {
+        alert('Failed to save key: ' + e.message);
+      }
+    }
+
+    function updateKeyChips(data) {
+      const map = {
+        virusTotal:         { chip: 'vtStatus',  masked: 'vtKeyMasked' },
+        googleSafeBrowsing: { chip: 'gsbStatus', masked: 'gsbKeyMasked' },
+        urlScan:            { chip: 'usStatus',  masked: 'usKeyMasked' }
+      };
+      let anyActive = false;
+      for (const [key, el] of Object.entries(map)) {
+        const s = data[key];
+        if (!s) continue;
+        const chip = document.getElementById(el.chip);
+        const masked = document.getElementById(el.masked);
+        if (s.configured) {
+          chip.textContent = 'CONFIGURED';
+          chip.className = 'sys-chip active';
+          if (masked) masked.textContent = 'Key: ' + s.masked;
+          anyActive = true;
+        } else {
+          chip.textContent = 'NOT CONFIGURED';
+          chip.className = 'sys-chip';
+          if (masked) masked.textContent = '';
+        }
+      }
+      const footerMode = document.getElementById('footerApiMode');
+      if (footerMode) footerMode.textContent = anyActive ? 'THREAT INTEL ACTIVE' : 'PURE HEURISTICS';
+    }
+
+    /* Load current key status on page load */
+    fetch('/api/keys').then(r => r.ok ? r.json() : null).then(d => { if (d) updateKeyChips(d); }).catch(() => {});
+  </script>
+</body>
+</html>

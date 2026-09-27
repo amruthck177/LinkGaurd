@@ -1,0 +1,26 @@
+{
+  "name": "linkguard",
+  "version": "1.0.0",
+  "description": "Client-side and full-stack phishing & malicious-URL heuristic detector",
+  "main": "server/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node server/tests/engine.test.js"
+  },
+  "keywords": [
+    "security",
+    "phishing",
+    "url-detector",
+    "heuristics",
+    "malware-analysis",
+    "cybersecurity",
+    "educational-tool"
+  ],
+  "author": "LinkGuard Contributors",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
